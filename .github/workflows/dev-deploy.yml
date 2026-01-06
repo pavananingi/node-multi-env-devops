@@ -1,0 +1,30 @@
+name: Deploy to DEV
+
+on:
+  push:
+    branches: [dev]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Image
+        run: docker build -t myapp:dev ./app
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            docker stop myapp-dev || true
+            docker rm myapp-dev || true
+            docker run -d \
+              --name myapp-dev \
+              --env-file /home/ubuntu/.env.dev \
+              -p 3001:3001 \
+              myapp:dev
