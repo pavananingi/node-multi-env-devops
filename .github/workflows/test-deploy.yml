@@ -2,26 +2,39 @@ name: Deploy to TEST
 
 on:
   push:
-    branches: [test]
+    branches:
+      - test
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - run: docker build -t myapp:test ./app
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: appleboy/ssh-action@v1
+      - name: Deploy to EC2 (TEST)
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
+            cd /home/ubuntu || exit 1
+
+            if [ ! -d node-multi-env-devops ]; then
+              git clone https://github.com/pavananingi/node-multi-env-devops.git
+            fi
+
+            cd node-multi-env-devops/app
+
             docker stop myapp-test || true
             docker rm myapp-test || true
+
+            docker build -t myapp:test .
+
             docker run -d \
               --name myapp-test \
               --env-file /home/ubuntu/.env.test \
-              -p 3002:3002 \
+              -p 3002:3000 \
               myapp:test
