@@ -2,24 +2,30 @@ name: Deploy to PROD
 
 on:
   push:
-    branches: [prod]
+    branches:
+      - prod
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - run: docker build -t myapp:prod ./app
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: appleboy/ssh-action@v1
+      - name: Build Docker Image
+        run: docker build -t myapp:prod ./app
+
+      - name: Deploy to EC2 (PROD)
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
+          username: ubuntu
           key: ${{ secrets.EC2_KEY }}
           script: |
             docker stop myapp-prod || true
             docker rm myapp-prod || true
+
             docker run -d \
               --name myapp-prod \
               --env-file /home/ubuntu/.env.prod \
