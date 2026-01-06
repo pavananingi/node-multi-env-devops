@@ -1,0 +1,27 @@
+name: Deploy to TEST
+
+on:
+  push:
+    branches: [test]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t myapp:test ./app
+
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            docker stop myapp-test || true
+            docker rm myapp-test || true
+            docker run -d \
+              --name myapp-test \
+              --env-file /home/ubuntu/.env.test \
+              -p 3002:3002 \
+              myapp:test
